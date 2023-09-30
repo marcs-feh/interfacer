@@ -1,5 +1,6 @@
-from yaml import SafeLoader, load
-from textwrap import dedent,indent
+import yaml
+from pprint import pprint
+from textwrap import indent
 from dataclasses import dataclass
 
 VTBL_ID = 'vtbl'
@@ -16,17 +17,40 @@ class Procedure:
     ret_type: str
     params: list[Param]
 
-def param_to_decl(p: Param):
+@dataclass
+class Interface:
+    name: str
+    procedures: list[Procedure]
+
+def expand_small_dict(d: dict) -> tuple[str, str]:
+    k, v = list(d.items())[0]
+    return k, v
+
+def proc_from_dict(name: str, proc: list) -> Procedure:
+    ret_type = proc[0]
+    params = [ Param(dtype='void*', identifier=IMPL_ID) ]
+    for p in proc[1:]:
+        id, dt = expand_small_dict(p)
+        params.append(Param(identifier=id, dtype=dt))
+    return Procedure(ret_type=ret_type, params=params, identifier=name)
+
+def interface_from_yaml(data: str) -> list[Interface]:
+    d = yaml.safe_load(data)
+    ifaces = []
+    for name, methods in d.items():
+        procs = [proc_from_dict(n,l) for n,l in methods.items()]
+        ifaces.append(Interface(name=name, procedures=procs))
+    return ifaces
+
+def cdecl_from_param(p: Param):
     return f'{p.dtype} {p.identifier}'
 
-def func_ptr_decl(method: dict):
-    proc = parse_to_proc(method)
-    params = ', '.join(map(param_to_decl, proc.params))
+def func_ptr_from_proc(proc: Procedure):
+    params = ', '.join(map(cdecl_from_param, proc.params))
     return f'{proc.ret_type} (*{proc.identifier})({params});'
 
-def func_sugar_impl(method: dict):
-    proc = parse_to_proc(method)
-    params = ', '.join(map(param_to_decl, proc.params))
+def iface_method_from_proc(proc: Procedure):
+    params = ', '.join(map(cdecl_from_param, proc.params))
     plist = ', '.join(map(lambda p: p.identifier, proc.params))
     func = (
        f'{proc.ret_type} {proc.identifier}({params}){{\n'
@@ -35,18 +59,20 @@ def func_sugar_impl(method: dict):
     )
     return func
 
-def parse_to_proc(method: dict) -> Procedure:
-    for name, proc in method.items():
-        ret_type = proc[0]
-        params = [ Param(dtype='void*', identifier=IMPL_ID) ]
-        for p in proc[1:]:
-            params.append(Param(identifier=p[0], dtype=p[1]))
-        return Procedure(ret_type=ret_type, params=params, identifier=name)
-    return Procedure('','',[])
+def impl_method_from_proc(proc: Procedure):
+    params = ', '.join(map(cdecl_from_param, proc.params[1:]))
+    # plist = ', '.join(map(lambda p: p.identifier, proc.params[1:]))
+    func = (
+       f'{proc.ret_type} {proc.identifier}({params});'
+    )
+    return func
 
-def vtbl_impl(method: dict):
-    proc = parse_to_proc(method)
-    params = ', '.join(map(param_to_decl, proc.params))
+def implementation_methods(iface: Interface):
+    methods = '\n'.join(map(impl_method_from_proc, iface.procedures))
+    return methods
+
+def vtable_entry_from_proc(proc: Procedure):
+    params = ', '.join(map(cdecl_from_param, proc.params))
     args = ', '.join(map(lambda p: p.identifier, proc.params[1:]))
     func = (
        f'.{proc.identifier} = []({params}) -> {proc.ret_type}{{\n'
@@ -57,10 +83,10 @@ def vtbl_impl(method: dict):
     return func
 
 
-def generate_vtable_type(methods: list):
+def vtable_type_from_procs(procs: list[Procedure]):
     vtbl_decls = []
-    for method in methods:
-        ptr = func_ptr_decl(method);
+    for method in procs:
+        ptr = func_ptr_from_proc(method);
         vtbl_decls.append(ptr)
 
     vtbl_decls = indent("\n".join(vtbl_decls), 4*' ')
@@ -73,52 +99,53 @@ def generate_vtable_type(methods: list):
     return out
 
 def generate_sugar(methods: list):
-    out = '\n'.join(map(func_sugar_impl, methods))
+    out = '\n'.join(map(iface_method_from_proc, methods))
     return out
 
-def generate_struct(name: str, methods: list):
-    vtable = indent(generate_vtable_type(methods), 4*' ')
-    methods_sugar = indent(generate_sugar(methods), 4*' ')
+def struct_from_interface(iface: Interface):
+    procs = iface.procedures
+    vtable_decl = indent(vtable_type_from_procs(procs), 4*' ')
+    methods_sugar = indent(generate_sugar(procs), 4*' ')
 
     out = (
-        f'struct {name}{{\n'
-        f'{vtable}\n\n'
+        f'struct {iface.name}{{\n'
+        f'{vtable_decl}\n\n'
         f'    const VTable *const {VTBL_ID} = nullptr;\n'
         f'    void* {IMPL_ID} = nullptr;\n\n'
         f'{methods_sugar}\n'
-        f'{name}(){{\n'
-        f'    tem\n'
-        f'}}\n'
         f'}};'
     )
     return out
 
-def generate_vtable(name: str, methods: list):
-    funcs = indent(',\n'.join(map(vtbl_impl, methods)), 4*' ');
+def vtable_from_iterface(iface: Interface):
+    funcs = indent(',\n'.join(map(vtable_entry_from_proc, iface.procedures)), 4*' ');
     out = (
         f'template<typename T>\n'
-        f'constexpr {name}::VTable {name}_vtable = {{\n'
+        f'constexpr {iface.name}::VTable {iface.name}_vtable = {{\n'
         f'{funcs}\n'
         f'}};\n'
     )
     return out
 
-def generate_interface(name: str, methods: list):
-    struct = generate_struct(name, methods) 
-    vtbl = generate_vtable(name, methods)
+def generate_interface(iface: Interface):
+    struct = struct_from_interface(iface) 
+    vtbl = vtable_from_iterface(iface)
 
     helper = (
         f'template<typename T>\n'
-        f'{name} make_{name.lower()}(T* impl){{\n'
-        f'	constexpr auto vt = {name}_vtable<T>;\n'
-        f'	return {name}{{\n'
+        f'{iface.name} make_{iface.name.lower()}(T* impl){{\n'
+        f'	constexpr auto vt = {iface.name}_vtable<T>;\n'
+        f'	return {iface.name}{{\n'
         f'		.impl = impl,\n'
         f'		.vtbl = &vt,\n'
         f'	}};\n'
         f'}}\n'
     )
 
-    return '\n'.join([struct, vtbl, helper])
+    implement = f'/* IMPLEMENTATION\n{implementation_methods(iface)}\n*/'
+
+    full_impl = '\n'.join([struct, vtbl, helper, implement])
+    return full_impl
     
 
 def main():
@@ -127,11 +154,14 @@ def main():
     with open('allocator.yaml', 'r') as f:
         data = f.read()
 
-    al = load(data, SafeLoader)
     # pprint(al)
+    ifaces = interface_from_yaml(data)
+    # pprint(yaml.safe_load(data))
 
-    code = generate_interface('Allocator', al['Allocator'])
-    print(code)
+    for iface in ifaces:
+        code = generate_interface(iface)
+        print(code)
+    # pprint(interface_from_yaml(data))
 
 
 if __name__ == '__main__': main()

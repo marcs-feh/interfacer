@@ -1,20 +1,25 @@
 Allocator:
-  - alloc: [void*,
-    [nbytes, int]]
+  alloc:
+    - void*
+    - nbytes: int
 
-  - alloc_undef: [void*,
-    [nbytes, int]]
+  alloc_undef:
+    - void*
+    - nbytes: int
 
-  - realloc: [void*,
-    [ptr, void*],
-    [new_size, int],
-  ]
+  realloc:
+    - void*
+    - ptr: void*
+    - new_size: int
 
-  - free: [void,
-    [ptr, void*]]
+  free:
+    - void
+    - ptr: void*
 
-  - free_all: [void]
+  free_all:
+    - void
 
-  - has_address: [bool,
-    [ptr, void*]]
+  has_address:
+    - bool
+    - ptr: void*
 

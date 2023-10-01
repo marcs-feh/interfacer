@@ -6,40 +6,33 @@ List:
     - T&
     - idx: int
 
-  len:
-    - int
-
-Container:
-  template:
-    - InnerType: class
-
-  len:
+  +len:
     - int
 
 
-Allocator:
-  alloc:
-    - void*
-    - nbytes: int
-
-  alloc_undef:
-    - void*
-    - nbytes: int
-
-  realloc:
-    - void*
-    - ptr: void*
-    - new_size: int
-
-  free:
-    - void
-    - ptr: void*
-
-  free_all:
-    - void
-
-  has_address:
-    - bool
-    - ptr: void*
-
-
+# Allocator:
+#   alloc:
+#     - void*
+#     - nbytes: int
+#
+#   alloc_undef:
+#     - void*
+#     - nbytes: int
+#
+#   realloc:
+#     - void*
+#     - ptr: void*
+#     - new_size: int
+#
+#   free:
+#     - void
+#     - ptr: void*
+#
+#   free_all:
+#     - void
+#
+#   has_address:
+#     - bool
+#     - ptr: void*
+#
+#

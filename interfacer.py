@@ -1,14 +1,13 @@
 import yaml
-from pprint import pprint
 from textwrap import indent
 from dataclasses import dataclass
 
-# TODO: Templating
 # TODO: Constness
 
 VTBL_ID = 'vtbl'
 IMPL_ID = 'impl'
 
+assert len(VTBL_ID) > 2
 IMPL_TYPE = IMPL_ID[0].upper() + IMPL_ID[1:].lower()
 
 @dataclass
@@ -21,6 +20,7 @@ class Procedure:
     identifier: str
     ret_type: str
     params: list[Param]
+    const: bool
 
 @dataclass
 class Template:
@@ -38,12 +38,19 @@ def expand_small_dict(d: dict) -> tuple[str, str]:
     return k, v
 
 def proc_from_dict(name: str, proc: list) -> Procedure:
+    constness = False
+    if name[0] == '+':
+        name = name[1:]
+        constness = True
+
     ret_type = proc[0]
-    params = [ Param(dtype='void*', identifier=IMPL_ID) ]
+    params = [ Param(dtype=f'void {const_str(constness)}*', identifier=IMPL_ID) ]
     for p in proc[1:]:
         id, dt = expand_small_dict(p)
         params.append(Param(identifier=id, dtype=dt))
-    return Procedure(ret_type=ret_type, params=params, identifier=name)
+
+    out = Procedure(ret_type=ret_type, params=params, identifier=name, const=constness)
+    return out
 
 def param_from_dict(d: dict) -> Param:
     id, dt = expand_small_dict(d)
@@ -71,19 +78,22 @@ def func_ptr_from_proc(proc: Procedure):
     return f'{proc.ret_type} (*{proc.identifier})({params});'
 
 def iface_method_from_proc(proc: Procedure):
-    params = ', '.join(map(cdecl_from_param, proc.params))
+    params = ', '.join(map(cdecl_from_param, proc.params[1:]))
     plist = ', '.join(map(lambda p: p.identifier, proc.params))
     func = (
-       f'{proc.ret_type} {proc.identifier}({params}){{\n'
+       f'{proc.ret_type} {proc.identifier}({params}){" const " if proc.const else ""}{{\n'
        f'\treturn {VTBL_ID}->{proc.identifier}({plist});\n'
        f'}}'
     )
     return func
 
+def const_str(p: bool) -> str:
+    return 'const' * int(p)
+
 def impl_method_from_proc(proc: Procedure):
     params = ', '.join(map(cdecl_from_param, proc.params[1:]))
     func = (
-       f'{proc.ret_type} {proc.identifier}({params});'
+       f'{proc.ret_type} {proc.identifier}{const_str(proc.const)}({params});'
     )
     return func
 
@@ -97,7 +107,7 @@ def vtable_entry_from_proc(proc: Procedure):
 
     func = (
        f'.{proc.identifier} = []({params}) -> {proc.ret_type}{{\n'
-       f'    auto obj = reinterpret_cast<{IMPL_TYPE}*>({IMPL_ID});\n'
+       f'    auto obj = reinterpret_cast<{const_str(proc.const)} {IMPL_TYPE}*>({IMPL_ID});\n'
        f'    return obj->{proc.identifier}({args});\n'
        f'}}'
     )
@@ -140,8 +150,8 @@ def struct_from_interface(iface: Interface):
         f'{template_info}'
         f'struct {iface.name}{{\n'
         f'{vtable_decl}\n\n'
-        f'\tconst VTable *const {VTBL_ID} = nullptr;\n'
-        f'\tvoid* {IMPL_ID} = nullptr;\n\n'
+        f'\tvoid* {IMPL_ID} = nullptr;\n'
+        f'\tconst VTable *const {VTBL_ID} = nullptr;\n\n'
         f'{methods_sugar}\n'
         f'}};'
     )
@@ -195,7 +205,7 @@ def generate_interface(iface: Interface):
         f'template<{template_decl}>\n'
         f'{iface.name}{iface_template_args} make_{iface.name.lower()}({IMPL_TYPE}* impl){{\n'
         f'constexpr auto vt = {iface.name}_vtable{vtable_template_args};\n'
-        f'\treturn {iface.name}{{\n'
+        f'\treturn {iface.name}{iface_template_args}{{\n'
         f'\t\t.impl = impl,\n'
         f'\t\t.vtbl = &vt,\n'
         f'\t}};\n'

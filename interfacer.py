@@ -155,13 +155,16 @@ def vtable_from_iterface(iface: Interface):
     template_decl += f'typename {IMPL_TYPE}'
 
     template_args = ''
+    dependent_type = ''
     if iface.template_info is not None:
         template_args = ', '.join(map(lambda p: p.identifier, iface.template_info.params))
         template_args = f'<{template_args}>'
+        dependent_type = 'typename'
 
     out = (
         f'template<{template_decl}>\n'
-        f'constexpr {iface.name}{template_args}::VTable {iface.name}_vtable = {{\n'
+        f'constexpr {dependent_type}\n'
+        f'{iface.name}{template_args}::VTable {iface.name}_vtable = {{\n'
         f'{funcs}\n'
         f'}};\n'
     )

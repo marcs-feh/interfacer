@@ -9,6 +9,13 @@ List:
   len:
     - int
 
+Container:
+  template:
+    - InnerType: class
+
+  len:
+    - int
+
 
 Allocator:
   alloc:

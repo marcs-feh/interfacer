@@ -1,4 +1,6 @@
 import yaml
+from sys import argv
+from hashlib import md5
 from textwrap import indent
 from dataclasses import dataclass
 
@@ -7,6 +9,13 @@ IMPL_ID = 'impl'
 
 assert len(VTBL_ID) > 2
 IMPL_TYPE = IMPL_ID[0].upper() + IMPL_ID[1:].lower()
+
+# Header guard types
+HG_NONE   = 'none'
+HG_IFDEF  = 'ifdef'
+HG_PRAGMA = 'pragma'
+
+HELP = 'Usage: interfacer [OPTIONS] [FILE]'
 
 @dataclass
 class Param:
@@ -179,7 +188,7 @@ def vtable_from_iterface(iface: Interface):
     return out
 
 def generate_interface(iface: Interface):
-    struct = struct_from_interface(iface) 
+    struct = struct_from_interface(iface)
     vtbl = vtable_from_iterface(iface)
     info_args = ''
     if iface.template_info is not None:
@@ -193,11 +202,21 @@ def generate_interface(iface: Interface):
     if len(info_args) > 0:
         iface_template_args = f'<{info_args}>'
 
-    vtable_template_args = info_args 
+    vtable_template_args = info_args
     if len(info_args) > 0:
         vtable_template_args = f'<{info_args}, {IMPL_TYPE}>'
     else:
         vtable_template_args = f'<{IMPL_TYPE}>'
+
+    prelude = (
+        '#if __cplusplus >= 201703L\n'
+        '#define INTERFACER_CONSTEXPR constexpr\n'
+        '#else\n'
+        '#define INTERFACER_CONSTEXPR\n'
+        '#endif\n'
+    )
+
+    epilogue = '#undef INTERFACER_CONSTEXPR'
 
     helper = (
         f'template<{template_decl}>\n'
@@ -212,24 +231,85 @@ def generate_interface(iface: Interface):
 
     implement = f'/* IMPLEMENTATION\n{implementation_methods(iface)}\n*/'
 
-    full_impl = '\n'.join([struct, vtbl, helper, implement])
+    full_impl = '\n'.join([prelude, struct, vtbl, helper, implement, epilogue])
+
+    guard = options['guard']
+    if guard == HG_NONE:
+        pass
+    elif guard == HG_IFDEF:
+        hg = '_include_' + md5(full_impl.encode('utf-8')).digest().hex()
+        full_impl = (
+            f'#ifndef {hg}\n'
+            f'#define {hg}\n\n'
+            f'{full_impl}\n\n'
+            f'#endif /* header guard */\n'
+        )
+    elif guard == HG_PRAGMA:
+        full_impl = f'#pragma once\n\n{full_impl}'
+    else:
+        print_fatal(f'Unknown guard option: {guard}')
+
     return full_impl
-    
+
+def cli_parse(args):
+  flags = []
+  regular = []
+  is_flag = lambda s: s[0] == '-' and len(s) > 1
+
+  def split_flag(s : str):
+    p = s.find(':')
+    if p > -1:
+      return (s[1:p], s[p+1:])
+    else:
+      return (s[1:], True)
+
+  for arg in args:
+    if is_flag(arg):
+      k, v = split_flag(arg)
+      flags.append((k,v))
+    else:
+      regular.append(arg)
+  return flags, regular
+
+options = {
+    'out': None,
+    'guard': HG_NONE,
+}
+
+def print_fatal(*args):
+    for a in args: print(a)
+    exit(1)
 
 def main():
-    data = ''
+    if len(argv) < 2:
+        print_fatal(HELP)
 
-    with open('list.yaml', 'r') as f:
-        data = f.read()
+    flags, files = cli_parse(argv[1:])
 
-    # pprint(al)
-    ifaces = interface_from_yaml(data)
-    # pprint(yaml.safe_load(data))
+    if len(files) < 1:
+        print_fatal(HELP)
 
-    for iface in ifaces:
-        code = generate_interface(iface)
-        print(code)
-    # pprint(interface_from_yaml(data))
+    yaml_data = ''
+    for file in files:
+        with open(file, 'r') as f:
+            yaml_data += f.read() + '\n\n'
 
+    for flag in flags:
+        k, v = flag
+        ok = k in options
+        if ok:
+            options[k] = v
+        else:
+            print_fatal(f'Unknown flag: {k}')
+
+    ifaces = interface_from_yaml(yaml_data)
+
+    if options['out'] is None:
+        for i in ifaces:
+            print(generate_interface(i))
+    else:
+        all_impl = '\n'.join([generate_interface(i) for i in ifaces])
+        with open(options['out'], 'w') as f:
+            f.write(all_impl)
 
 if __name__ == '__main__': main()

@@ -7,8 +7,7 @@ that creates "fat pointer" interfaces from YAML files. It also generates a
 helper to make it easy to integrate it to your code, but you still can specify
 your own vtables just fine.
 
-![](info.png)
-
+![Different Approaches for Dynamic Dispatch](info.png)
 
 ## Usage
 
@@ -25,14 +24,32 @@ Allocator:
   - alloc:
     - void*
     - nbytes: int
-  
+
   - free:
     - void
     - ptr: void*
-  
+
   # Start a method name with + to mark it const
   - +full:
     - bool
+```
+
+### Generic container type (List)
+```yaml
+# A List of type T is any container that has an indexing and a length method.
+
+List:
+  # Template arguments are declared similar to methods
+  template:
+    - T: typename
+
+  at:
+    - T&
+    - idx: int
+
+  +len:
+    - int
+
 ```
 
 ## Limitations

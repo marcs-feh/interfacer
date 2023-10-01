@@ -1,1 +1,8 @@
 test*
+__pycache__/
+*.out
+*.exe
+*.o
+*.so
+*.c
+*.pyc

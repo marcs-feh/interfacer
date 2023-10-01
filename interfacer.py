@@ -2,8 +2,6 @@ import yaml
 from textwrap import indent
 from dataclasses import dataclass
 
-# TODO: Constness
-
 VTBL_ID = 'vtbl'
 IMPL_ID = 'impl'
 
@@ -93,7 +91,7 @@ def const_str(p: bool) -> str:
 def impl_method_from_proc(proc: Procedure):
     params = ', '.join(map(cdecl_from_param, proc.params[1:]))
     func = (
-       f'{proc.ret_type} {proc.identifier}{const_str(proc.const)}({params});'
+       f'{proc.ret_type} {proc.identifier}({params}){const_str(proc.const)};'
     )
     return func
 
@@ -204,7 +202,7 @@ def generate_interface(iface: Interface):
     helper = (
         f'template<{template_decl}>\n'
         f'{iface.name}{iface_template_args} make_{iface.name.lower()}({IMPL_TYPE}* impl){{\n'
-        f'constexpr auto vt = {iface.name}_vtable{vtable_template_args};\n'
+        f'static constexpr auto vt = {iface.name}_vtable{vtable_template_args};\n'
         f'\treturn {iface.name}{iface_template_args}{{\n'
         f'\t\t.impl = impl,\n'
         f'\t\t.vtbl = &vt,\n'

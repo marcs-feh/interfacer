@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import yaml
 from datetime import datetime, timezone
 from sys import argv

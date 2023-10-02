@@ -1,11 +1,12 @@
 # Interfacer: Create Interfaces using THICC Pointers in C++
 
 Tired of `virtual` and its gross hidden `__vtable` pointer? Do you want
-something more akin to Rust's `as &dyn <trait>`? Need more control of you
-vtables? This is probably for you. Interfacer is a simple code generation tool
-that creates "fat pointer" interfaces from YAML files. It also generates a
-helper `make_interfacename` function to make it easy to integrate it to your
-code, but you still can specify your own vtables just fine.
+something more akin to Rust's `as &dyn <trait>`? Need more control of your
+vtables? Are you tired of using filthy inheritance to achieve your goals? This
+is probably for you. Interfacer is a simple code generation tool that creates
+"fat pointer" interfaces from YAML files. It also generates a helper
+`make_interfacename` function to make it easy to integrate it to your code, but
+you still can specify your own vtables just fine.
 
 ![Different Approaches for Dynamic Dispatch](info.png)
 

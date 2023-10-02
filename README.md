@@ -20,18 +20,18 @@ you still can specify your own vtables just fine.
 ```yaml
 # Interface name
 Allocator:
-  # List of Methods, first element of each method must be its return type,
+  # Interface Methods, first element of each method must be its return type,
   # followed by key-value pairs of identifier and type
-  - alloc:
-    - void*
-    - nbytes: int
+  alloc:
+  - void*
+  - nbytes: int
 
-  - free:
-    - void
-    - ptr: void*
+  free:
+  - void
+  - ptr: void*
 
   # Start a method name with + to mark it const
-  - +full:
+  +full:
     - bool
 ```
 

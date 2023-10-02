@@ -164,7 +164,7 @@ def struct_from_interface(iface: Interface):
     )
     return out
 
-def vtable_from_iterface(iface: Interface):
+def vtable_from_interface(iface: Interface):
     funcs = indent(',\n'.join(map(vtable_entry_from_proc, iface.procedures)), '\t');
 
     template_decl = f'{template_info_from_iface(iface)}'
@@ -189,7 +189,7 @@ def vtable_from_iterface(iface: Interface):
 
 def generate_interface(iface: Interface):
     struct = struct_from_interface(iface)
-    vtbl = vtable_from_iterface(iface)
+    vtbl = vtable_from_interface(iface)
     info_args = ''
     if iface.template_info is not None:
         info_args = ', '.join(map(lambda p: p.identifier, iface.template_info.params))

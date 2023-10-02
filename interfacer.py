@@ -103,7 +103,7 @@ def iface_method_from_proc(proc: Procedure):
     plist = ', '.join(map(lambda p: p.identifier, proc.params))
     func = (
        f'{proc.ret_type} {proc.identifier}({params}){" const " if proc.const else ""}{{\n'
-       f'\treturn {VTBL_ID}->{proc.identifier}({plist});\n'
+       f'  return {VTBL_ID}->{proc.identifier}({plist});\n'
        f'}}'
     )
     return func
@@ -141,7 +141,7 @@ def vtable_type_from_procs(procs: list[Procedure]):
         ptr = func_ptr_from_proc(method);
         vtbl_decls.append(ptr)
 
-    vtbl_decls = indent("\n".join(vtbl_decls), '\t')
+    vtbl_decls = indent("\n".join(vtbl_decls), '  ')
 
     out = (
         f'struct VTable{{\n'
@@ -161,8 +161,8 @@ def template_info_from_iface(iface: Interface) -> str:
 
 def struct_from_interface(iface: Interface):
     procs = iface.procedures
-    vtable_decl = indent(vtable_type_from_procs(procs), '\t')
-    methods_sugar = indent(generate_sugar(procs), '\t')
+    vtable_decl = indent(vtable_type_from_procs(procs), '  ')
+    methods_sugar = indent(generate_sugar(procs), '  ')
     template_info = template_info_from_iface(iface)
     if len(template_info) > 0:
         template_info = f'template<{template_info}>\n'
@@ -171,18 +171,18 @@ def struct_from_interface(iface: Interface):
         f'{template_info}'
         f'struct {iface.name}{{\n'
         f'{vtable_decl}\n\n'
-        f'\tvoid* {IMPL_ID} = nullptr;\n'
-        f'\tconst VTable *const {VTBL_ID} = nullptr;\n\n'
+        f'  void* {IMPL_ID} = nullptr;\n'
+        f'  const VTable *const {VTBL_ID} = nullptr;\n\n'
         f'{methods_sugar}\n\n'
-        f'\tconstexpr operator bool(){{\n'
-        f'\t\treturn (impl != nullptr) && (vtbl != nullptr);\n'
-        f'\t}}\n'
+        f'  constexpr operator bool(){{\n'
+        f'    return (impl != nullptr) && (vtbl != nullptr);\n'
+        f'  }}\n'
         f'}};'
     )
     return out
 
 def vtable_from_interface(iface: Interface):
-    funcs = indent(',\n'.join(map(vtable_entry_from_proc, iface.procedures)), '\t');
+    funcs = indent(',\n'.join(map(vtable_entry_from_proc, iface.procedures)), '  ');
 
     template_decl = f'{template_info_from_iface(iface)}'
     if len(template_decl) > 0: template_decl += ', '
@@ -242,11 +242,11 @@ def generate_interface(iface: Interface, guard = HG_NONE, use_timestamp = False)
     helper = (
         f'template<{template_decl}>\n'
         f'{iface.name}{iface_template_args} make_{iface.name.lower()}({IMPL_TYPE}* impl){{\n'
-        f'static INTERFACER_CONSTEXPR const auto vt = {iface.name}_vtable{vtable_template_args};\n'
-        f'\treturn {iface.name}{iface_template_args}{{\n'
-        f'\t\t.impl = impl,\n'
-        f'\t\t.vtbl = &vt,\n'
-        f'\t}};\n'
+        f'  static INTERFACER_CONSTEXPR const auto vt = {iface.name}_vtable{vtable_template_args};\n'
+        f'  return {iface.name}{iface_template_args}{{\n'
+        f'    .impl = impl,\n'
+        f'    .vtbl = &vt,\n'
+        f'  }};\n'
         f'}}\n'
     )
 

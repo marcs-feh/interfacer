@@ -6,4 +6,3 @@ List:
     - idx: int
   +len:
     - int
-

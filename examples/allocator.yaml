@@ -1,0 +1,19 @@
+Allocator:
+  alloc:
+    - void*
+    - nbytes: usize
+
+  alloc_undef:
+    - void*
+    - nbytes: usize
+
+  free:
+    - void
+    - ptr: void*
+
+  free_all:
+    - void
+
+  has_address:
+    - bool
+    - p: void*

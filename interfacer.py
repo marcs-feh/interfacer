@@ -83,7 +83,7 @@ def interface_from_yaml(data: str) -> list[Interface]:
     ifaces = []
     for name, methods in d.items():
         try:
-            template_params = [param_from_dict(p) for p in  (methods.pop('template'))]
+            template_params = [param_from_dict(p) for p in (methods.pop('template'))]
             itemplate = Template(params=template_params)
         except KeyError:
             itemplate = None

@@ -1,5 +1,3 @@
-#pragma once
-
 #if __cplusplus >= 201703L
 #define INTERFACER_CONSTEXPR constexpr
 #else
@@ -24,7 +22,7 @@ struct List{
 	}
 };
 template<typename T, typename Impl>
-constexpr typename
+INTERFACER_CONSTEXPR typename
 List<T>::VTable List_vtable = {
 	.at = [](void * impl, int idx) -> T&{
 	    auto obj = reinterpret_cast< Impl*>(impl);
@@ -38,7 +36,7 @@ List<T>::VTable List_vtable = {
 
 template<typename T, typename Impl>
 List<T> make_list(Impl* impl){
-static constexpr const auto vt = List_vtable<T, Impl>;
+static INTERFACER_CONSTEXPR const auto vt = List_vtable<T, Impl>;
 	return List<T>{
 		.impl = impl,
 		.vtbl = &vt,

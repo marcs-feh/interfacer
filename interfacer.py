@@ -180,7 +180,7 @@ def vtable_from_interface(iface: Interface):
 
     out = (
         f'template<{template_decl}>\n'
-        f'constexpr {dependent_type}\n'
+        f'INTERFACER_CONSTEXPR {dependent_type}\n'
         f'{iface.name}{template_args}::VTable {iface.name}_vtable = {{\n'
         f'{funcs}\n'
         f'}};\n'
@@ -221,7 +221,7 @@ def generate_interface(iface: Interface):
     helper = (
         f'template<{template_decl}>\n'
         f'{iface.name}{iface_template_args} make_{iface.name.lower()}({IMPL_TYPE}* impl){{\n'
-        f'static constexpr auto vt = {iface.name}_vtable{vtable_template_args};\n'
+        f'static INTERFACER_CONSTEXPR const auto vt = {iface.name}_vtable{vtable_template_args};\n'
         f'\treturn {iface.name}{iface_template_args}{{\n'
         f'\t\t.impl = impl,\n'
         f'\t\t.vtbl = &vt,\n'

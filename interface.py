@@ -16,15 +16,37 @@ class Method:
 
     def func_ptr_decl(self) -> str:
         name, dtype = self.decl.name, self.decl.dtype
-        args = ', '.join((map(lambda a: a.expand(), self.args)))
+        args = ', '.join(map(lambda a: a.expand(),
+                              [Declaration('impl', 'void *')] + self.args))
         if len(args) == 0:
             args = 'void'
         decl = f'{dtype} (*{name})({args});'
         return decl
 
-    def vtable_entries(self): return
+    def vtable_lambda_impl(self) -> str:
+        name, dtype = self.decl.name, self.decl.dtype
+        args_decl = ', '.join(map(lambda a: a.expand(),
+                              [Declaration('impl', 'void *')] + self.args))
+        args_use = ', '.join(map(lambda a: a.name, self.args))
 
-    def implement(self): return
+        # TODO: const on reinterpret_cast
+        lamb = [f'.{name} = []({args_decl}) -> {dtype} {{',
+                'auto obj = reinterpret_cast<_Impl*>(impl);',
+                f'return obj->{name}({args_use});',
+                '}']
+        return '\n'.join(lamb)
+
+    def implementation(self) -> str:
+        name, dtype = self.decl.name, self.decl.dtype
+        args_decl = ', '.join(map(lambda a: a.expand(), self.args))
+        args_use = ', '.join(['_impl'] + list(map(lambda a: a.name, self.args)))
+
+        impl = [f'{dtype} {name}({args_decl}){{',
+                f'return _vtable->{name}({args_use});',
+                '}']
+
+        return '\n'.join(impl)
+
 
 @dataclass
 class Interface:
@@ -32,15 +54,41 @@ class Interface:
     methods: list[Method]
     template: list[Declaration]|None= None
 
+    def generate_vtable_helper(self) -> str:
+        methods = ',\n'.join(map(lambda m: m.vtable_lambda_impl(), self.methods))
+        # TODO: other template args + typenmae for dependant types
+        helper = ['template<typename _Impl>',
+                  'static constexpr',
+                  f'{self.name}::VTable vtable_helper = {{',
+                  methods,
+                  '};']
+
+        return '\n'.join(helper)
+
     def generate_struct(self) -> str:
-        msrc = list(map(lambda m: m.func_ptr_decl(), self.methods))
+        func_ptrs = list(map(lambda m: m.func_ptr_decl(), self.methods))
         struct = [f'struct {self.name} {{']
-        vtable = ['struct VTable {'] + msrc + ['};']
-        members = ['void * _impl;', 'const VTable * const _vtable;']
+        vtable = ['struct VTable {'] + func_ptrs + ['};']
+        m_data = ['void * _impl;', 'const VTable * const _vtable;']
+        m_funcs = list(map(lambda m: m.implementation(), self.methods))
+        vtable_helper = self.generate_vtable_helper()
 
         # TODO: Constructor
-        src = '\n'.join(struct + vtable + members + ['};'])
+        src = '\n'.join(struct + vtable + m_data + m_funcs + [vtable_helper] + ['};'])
         return src
+    
+    
+    def generate_func_helper(self):
+        # TODO: other template args + typenmae for dependant types
+        helper = ['template<typename _Impl>',
+                  f'{self.name} make_{self.name.lower()}(void* impl){{',
+                  f'static constexpr const auto vt = {self.name}::vtable_helper<_Impl>;',
+                  f'return {self.name}{{',
+                  '._vtable = &vt,',
+                  '._impl = impl,',
+                  '};', '}']
+
+        return '\n'.join(helper)
 
 def extract_decl(s: str) -> Declaration:
     p = s.split(':', 1)
@@ -111,3 +159,4 @@ from pprint import pprint
 # pprint(i)
 
 print(i[0].generate_struct())
+print(i[0].generate_func_helper())

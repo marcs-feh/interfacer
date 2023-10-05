@@ -130,6 +130,17 @@ def extract_decl(s: str) -> Declaration:
 
     return d
 
+def remove_all(l: list, e) -> int:
+    n = 0
+    try:
+        while True:
+            l.remove(e)
+            n += 1
+    except ValueError:
+        pass
+
+    return n
+
 def extract_decls(l: list[str]) -> list[Declaration]:
     args = list(map(extract_decl, l))
     return args
@@ -154,9 +165,11 @@ def extract_template(d: dict) -> list[Declaration] | None:
 def extract_methods(d: dict) -> list[Method]:
     methods = []
     for decl_str, args in d.items():
+        const = remove_all(args, '@const') > 0
         methods.append(Method(
             decl=extract_decl(decl_str),
             args=extract_decls(args),
+            const=const,
         ))
     d.clear()
     return methods
@@ -180,8 +193,6 @@ def interfaces(d: dict) -> list[Interface]:
         ifaces.append(extract_interface(iname, idata))
     return ifaces
 
-# TODO: Hoist all interface's #includes to global scope?
-
 i = interfaces({
     'Allocator':{
         '@include':['types.hpp'],
@@ -192,8 +203,8 @@ i = interfaces({
     },
     'List':{
         '@template':['T:typename'],
-        'at:T&':['idx:int'],
-        'len:int':[],
+        'at:const T&': ['idx:int'],
+        'len:int':['@const'],
     },
     'NArray':{
         '@template':['T:typename', 'N:int'],

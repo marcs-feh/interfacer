@@ -52,11 +52,11 @@ class Method:
 class Interface:
     name: str
     methods: list[Method]
-    template: list[Declaration]|None= None
+    template: list[Declaration]|None = None
+    includes: list[str]|None = None
 
     def generate_vtable_helper(self) -> str:
         methods = ',\n'.join(map(lambda m: m.vtable_lambda_impl(), self.methods))
-        # TODO: other template args + typenmae for dependant types
         helper = ['template<typename _Impl>',
                   'static constexpr',
                   f'VTable vtable_helper = {{',
@@ -82,10 +82,9 @@ class Interface:
         src = '\n'.join(templ_decl + struct + vtable + m_data + m_funcs + [vtable_helper] + ['};'])
 
         return src
-    
-    
+
+
     def generate_func_helper(self):
-        # TODO: other template args + typenmae for dependant types
         ret_type = f'{self.name}'
         templ_decl = []
         dependant_type = ''
@@ -98,8 +97,6 @@ class Interface:
         templ_decl.append('typename _Impl')
         templ_decl = ', '.join(templ_decl)
 
-
-
         helper = [f'template<{templ_decl}>',
                   f'auto make_{self.name.lower()}(void* impl){{',
                   f'static constexpr const auto vt = {ret_type}::{dependant_type}vtable_helper<_Impl>;',
@@ -109,6 +106,18 @@ class Interface:
                   '};', '}']
 
         return '\n'.join(helper)
+
+    def generate(self) -> str:
+        code = [self.generate_struct(), self.generate_func_helper()]
+        sys_include = lambda s: (s[0] == '<') and (s[-1] == '>')
+        if self.includes is not None:
+            incs = '\n'.join(map(
+                lambda i:f'#include {i}' if sys_include(i) else f'#include "{i}"',
+                self.includes
+            ))
+            code.insert(0, incs + '\n')
+
+        return '\n'.join(code)
 
 def extract_decl(s: str) -> Declaration:
     p = s.split(':', 1)
@@ -124,6 +133,14 @@ def extract_decl(s: str) -> Declaration:
 def extract_decls(l: list[str]) -> list[Declaration]:
     args = list(map(extract_decl, l))
     return args
+
+def extract_includes(d: dict) -> list[str] | None:
+    try:
+        includes = list( map(lambda s: s.strip(), d.pop('@include')))
+
+        return includes
+    except KeyError:
+        return
 
 def extract_template(d: dict) -> list[Declaration] | None:
     try:
@@ -146,23 +163,28 @@ def extract_methods(d: dict) -> list[Method]:
 
 def extract_interface(name, d) -> Interface:
     t = extract_template(d)
+    i = extract_includes(d)
     m = extract_methods(d)
     iface = Interface(
         name=name,
         template=t,
         methods=m,
+        includes=i,
     )
 
     return iface
 
-def interface(d: dict) -> list[Interface]:
+def interfaces(d: dict) -> list[Interface]:
     ifaces = []
     for iname, idata in d.items():
         ifaces.append(extract_interface(iname, idata))
     return ifaces
 
-i = interface({
+# TODO: Hoist all interface's #includes to global scope?
+
+i = interfaces({
     'Allocator':{
+        '@include':['types.hpp'],
         'alloc:void*':['nbytes:int'],
         'free:void':['ptr:void*'],
         'realloc:void*':['ptr:void*', 'new_size:int'],
@@ -180,10 +202,5 @@ i = interface({
     }
 })
 
-from pprint import pprint
-# pprint(i)
-
-print(i[0].generate_struct())
-print(i[0].generate_func_helper())
-print(i[1].generate_struct())
-print(i[1].generate_func_helper())
+print(i[0].generate())
+print(i[1].generate())

@@ -59,7 +59,7 @@ class Interface:
         # TODO: other template args + typenmae for dependant types
         helper = ['template<typename _Impl>',
                   'static constexpr',
-                  f'{self.name}::VTable vtable_helper = {{',
+                  f'VTable vtable_helper = {{',
                   methods,
                   '};']
 
@@ -68,21 +68,41 @@ class Interface:
     def generate_struct(self) -> str:
         func_ptrs = list(map(lambda m: m.func_ptr_decl(), self.methods))
         struct = [f'struct {self.name} {{']
+        templ_decl = []
+        if self.template is not None:
+            templ_decl = ', '.join(map(lambda d: d.expand(), self.template))
+            templ_decl = [f'template<{templ_decl}>']
+
         vtable = ['struct VTable {'] + func_ptrs + ['};']
         m_data = ['void * _impl;', 'const VTable * const _vtable;']
         m_funcs = list(map(lambda m: m.implementation(), self.methods))
         vtable_helper = self.generate_vtable_helper()
 
         # TODO: Constructor
-        src = '\n'.join(struct + vtable + m_data + m_funcs + [vtable_helper] + ['};'])
+        src = '\n'.join(templ_decl + struct + vtable + m_data + m_funcs + [vtable_helper] + ['};'])
+
         return src
     
     
     def generate_func_helper(self):
         # TODO: other template args + typenmae for dependant types
-        helper = ['template<typename _Impl>',
-                  f'{self.name} make_{self.name.lower()}(void* impl){{',
-                  f'static constexpr const auto vt = {self.name}::vtable_helper<_Impl>;',
+        ret_type = f'{self.name}'
+        templ_decl = []
+        dependant_type = ''
+        if self.template is not None:
+            templ_decl += list(map(lambda d: d.expand(), self.template))
+            templ_usage = ', '.join(map(lambda d: d.name, self.template))
+            ret_type += f'<{templ_usage}>'
+            dependant_type = 'template '
+
+        templ_decl.append('typename _Impl')
+        templ_decl = ', '.join(templ_decl)
+
+
+
+        helper = [f'template<{templ_decl}>',
+                  f'{ret_type} make_{self.name.lower()}(void* impl){{',
+                  f'static constexpr const auto vt = {ret_type}::{dependant_type}vtable_helper<_Impl>;',
                   f'return {self.name}{{',
                   '._vtable = &vt,',
                   '._impl = impl,',
@@ -160,3 +180,5 @@ from pprint import pprint
 
 print(i[0].generate_struct())
 print(i[0].generate_func_helper())
+print(i[1].generate_struct())
+print(i[1].generate_func_helper())

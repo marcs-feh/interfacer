@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from hashlib import md5
 
 @dataclass
 class Declaration:
@@ -17,7 +18,7 @@ class Method:
     def func_ptr_decl(self) -> str:
         name, dtype = self.decl.name, self.decl.dtype
         args = ', '.join(map(lambda a: a.expand(),
-                              [Declaration('impl', 'void *')] + self.args))
+                             [Declaration('impl', 'void *')] + self.args))
         if len(args) == 0:
             args = 'void'
         decl = f'{dtype} (*{name})({args});'
@@ -26,12 +27,12 @@ class Method:
     def vtable_lambda_impl(self) -> str:
         name, dtype = self.decl.name, self.decl.dtype
         args_decl = ', '.join(map(lambda a: a.expand(),
-                              [Declaration('impl', 'void *')] + self.args))
+                                  [Declaration('impl', f'{"const " if self.const else ""}void *')] + self.args))
         args_use = ', '.join(map(lambda a: a.name, self.args))
 
         # TODO: const on reinterpret_cast
         lamb = [f'.{name} = []({args_decl}) -> {dtype} {{',
-                'auto obj = reinterpret_cast<_Impl*>(impl);',
+                f'auto obj = reinterpret_cast<{"const " if self.const else ""}_Impl *>(impl);',
                 f'return obj->{name}({args_use});',
                 '}']
         return '\n'.join(lamb)
@@ -41,7 +42,7 @@ class Method:
         args_decl = ', '.join(map(lambda a: a.expand(), self.args))
         args_use = ', '.join(['_impl'] + list(map(lambda a: a.name, self.args)))
 
-        impl = [f'{dtype} {name}({args_decl}){{',
+        impl = [f'{dtype} {name}({args_decl}){" const " if self.const else ""}{{',
                 f'return _vtable->{name}({args_use});',
                 '}']
 
@@ -54,6 +55,7 @@ class Interface:
     methods: list[Method]
     template: list[Declaration]|None = None
     includes: list[str]|None = None
+    aliases: list[Declaration]|None = None
 
     def generate_vtable_helper(self) -> str:
         methods = ',\n'.join(map(lambda m: m.vtable_lambda_impl(), self.methods))
@@ -119,6 +121,30 @@ class Interface:
 
         return '\n'.join(code)
 
+    def generate_file(self, outfile: str, guard: str = 'none'):
+        src = add_header_guard(self.generate(), guard)
+        with open(outfile, 'w') as f:
+            f.write(src)
+
+def add_header_guard(src: str, mode: str) -> str:
+    MODES = ('pragma', 'ifdef', 'none',)
+    assert mode in MODES, f'Invalid mode: {mode}'
+
+    if mode == 'pragma':
+        return '#pragma once\n\n'+src
+    elif mode == 'ifdef':
+        print('MODE IFDEF')
+        g = md5(src.encode('utf-8'), usedforsecurity=False).hexdigest()
+        src = '\n'.join([
+            f'#ifndef _include_{g}_',
+            f'#define _include_{g}_\n',
+            src, '',
+            f'#endif /* Header Guard */'
+        ])
+
+    return src
+
+
 def extract_decl(s: str) -> Declaration:
     p = s.split(':', 1)
     assert len(p) == 2, f"Invalid Declaration string '{s}'"
@@ -145,6 +171,13 @@ def extract_decls(l: list[str]) -> list[Declaration]:
     args = list(map(extract_decl, l))
     return args
 
+def extract_file(d: dict) -> str | None:
+    try:
+        f = d.pop('@file')
+        return f
+    except KeyError:
+        return
+
 def extract_includes(d: dict) -> list[str] | None:
     try:
         includes = list( map(lambda s: s.strip(), d.pop('@include')))
@@ -159,8 +192,6 @@ def extract_template(d: dict) -> list[Declaration] | None:
         return extract_decls(args)
     except KeyError:
         return None
-
-# TODO CONST
 
 def extract_methods(d: dict) -> list[Method]:
     methods = []
@@ -213,5 +244,5 @@ i = interfaces({
     }
 })
 
-print(i[0].generate())
-print(i[1].generate())
+print(i[0].generate_file('test.hpp', guard='pragma'))
+# print(i[1].generate())

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from hashlib import md5
+from copy import deepcopy
 
 @dataclass
 class Declaration:
@@ -133,7 +134,6 @@ def add_header_guard(src: str, mode: str) -> str:
     if mode == 'pragma':
         return '#pragma once\n\n'+src
     elif mode == 'ifdef':
-        print('MODE IFDEF')
         g = md5(src.encode('utf-8'), usedforsecurity=False).hexdigest()
         src = '\n'.join([
             f'#ifndef _include_{g}_',
@@ -167,17 +167,6 @@ def remove_all(l: list, e) -> int:
 
     return n
 
-def extract_decls(l: list[str]) -> list[Declaration]:
-    args = list(map(extract_decl, l))
-    return args
-
-def extract_file(d: dict) -> str | None:
-    try:
-        f = d.pop('@file')
-        return f
-    except KeyError:
-        return
-
 def extract_includes(d: dict) -> list[str] | None:
     try:
         includes = list( map(lambda s: s.strip(), d.pop('@include')))
@@ -189,7 +178,8 @@ def extract_includes(d: dict) -> list[str] | None:
 def extract_template(d: dict) -> list[Declaration] | None:
     try:
         args = d.pop('@template')
-        return extract_decls(args)
+        args = list(map(lambda a: extract_decl(a), args))
+        return args
     except KeyError:
         return None
 
@@ -199,7 +189,7 @@ def extract_methods(d: dict) -> list[Method]:
         const = remove_all(args, '@const') > 0
         methods.append(Method(
             decl=extract_decl(decl_str),
-            args=extract_decls(args),
+            args=list(map(lambda a: extract_decl(a), args)),
             const=const,
         ))
     d.clear()
@@ -218,13 +208,20 @@ def extract_interface(name, d) -> Interface:
 
     return iface
 
-def interfaces(d: dict) -> list[Interface]:
+def make_interfaces(d: dict) -> list[Interface]:
+    dc = deepcopy(d)
     ifaces = []
-    for iname, idata in d.items():
+    for iname, idata in dc.items():
         ifaces.append(extract_interface(iname, idata))
     return ifaces
 
-i = interfaces({
+def interface(name: str, d: dict) -> Interface:
+    dc = deepcopy(d)
+    return extract_interface(name, dc)
+
+
+
+i = make_interfaces({
     'Allocator':{
         '@include':['types.hpp'],
         'alloc:void*':['nbytes:int'],
@@ -244,5 +241,6 @@ i = interfaces({
     }
 })
 
-print(i[0].generate_file('test.hpp', guard='pragma'))
+
+
 # print(i[1].generate())

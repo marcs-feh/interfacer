@@ -219,28 +219,3 @@ def interface(name: str, d: dict) -> Interface:
     dc = deepcopy(d)
     return extract_interface(name, dc)
 
-
-
-i = make_interfaces({
-    'Allocator':{
-        '@include':['types.hpp'],
-        'alloc:void*':['nbytes:int'],
-        'free:void':['ptr:void*'],
-        'realloc:void*':['ptr:void*', 'new_size:int'],
-        'free_all:void':[],
-    },
-    'List':{
-        '@template':['T:typename'],
-        'at:const T&': ['idx:int'],
-        'len:int':['@const'],
-    },
-    'NArray':{
-        '@template':['T:typename', 'N:int'],
-        'at:T&':['idx:int'],
-        'len:int':[],
-    }
-})
-
-
-
-# print(i[1].generate())

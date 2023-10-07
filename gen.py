@@ -1,7 +1,7 @@
 from interfacer import interface
 
 interface('Allocator', {
-    '@include': ['<cstddef>'],
+    '@include': ['<cstddef>', 'types.hpp'],
     'alloc: void*': ['nbytes: usize'],
     'alloc_undef: void*': ['nbytes: usize'],
     'realloc: void*': ['p: void*', 'nbytes: usize'],

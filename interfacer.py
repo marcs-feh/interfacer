@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from hashlib import md5
 from copy import deepcopy
+from sys import stderr
 
 @dataclass
 class Declaration:
@@ -19,7 +20,7 @@ class Method:
     def func_ptr_decl(self) -> str:
         name, dtype = self.decl.name, self.decl.dtype
         args = ', '.join(map(lambda a: a.expand(),
-                             [Declaration('impl', 'void *')] + self.args))
+                             [Declaration('impl', f'{"const " if self.const else ""}void *')] + self.args))
         if len(args) == 0:
             args = 'void'
         decl = f'{dtype} (*{name})({args});'
@@ -101,11 +102,11 @@ class Interface:
         templ_decl = ', '.join(templ_decl)
 
         helper = [f'template<{templ_decl}>',
-                  f'auto make_{self.name.lower()}(void* impl){{',
+                  f'auto make_{self.name.lower()}(_Impl* impl){{',
                   f'static constexpr const auto vt = {ret_type}::{dependant_type}vtable_helper<_Impl>;',
                   f'return {ret_type}{{',
-                  '._vtable = &vt,',
                   '._impl = impl,',
+                  '._vtable = &vt,',
                   '};', '}']
 
         return '\n'.join(helper)
@@ -124,8 +125,11 @@ class Interface:
 
     def generate_file(self, outfile: str, guard: str = 'none'):
         src = add_header_guard(self.generate(), guard)
+
         with open(outfile, 'w') as f:
-            f.write(src)
+            n = f.write(src)
+            if n > 0:
+                stderr.write(f'Wrote {n}B to {outfile}\n')
 
 def add_header_guard(src: str, mode: str) -> str:
     MODES = ('pragma', 'ifdef', 'none',)

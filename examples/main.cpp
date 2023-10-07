@@ -3,10 +3,45 @@
 // Generate the list.hpp file with:
 // interfacer -out:list.hpp list.yaml -guard:pragma
 #include "list.hpp"
+#include "allocator.hpp"
 
 typedef unsigned int uint;
 
-// NO INHERITANCE!
+// NO INHERITANCE NEEDED!
+
+struct HeapAllocator {
+	void* alloc(usize nbytes){
+		byte* p = (byte*)std::malloc(nbytes);
+		if(p != nullptr){
+			for(usize i = 0; i < nbytes; i += 1){
+				p[i] = 0;
+			}
+		}
+		return p;
+	}
+
+	void* alloc_undef(usize nbytes){
+		byte* p = (byte*)std::malloc(nbytes);
+		return p;
+	}
+
+	void* realloc(void* p, usize nbytes){
+		return std::realloc(p, nbytes);
+	}
+
+	void free(void* p){
+		std::free(p);
+	}
+
+	void free_all(){
+		std::cerr << "Unsupported operation\n";
+		std::abort();
+	}
+
+	bool has_address(void*){ return false; }
+
+};
+
 template<typename X, uint N>
 struct StkArray {
 	X data[N];
@@ -25,6 +60,7 @@ template<typename X>
 struct HeapArray {
 	X* data;
 	uint length;
+	Allocator alloc;
 
 	X& at(int idx){
 		return data[idx];
@@ -35,13 +71,13 @@ struct HeapArray {
 		return length;
 	}
 
-	HeapArray(uint n) : length{n} {
-		data = new X[n];
+	HeapArray(Allocator al, uint n) : length{n}, alloc(al) {
+		data = (float*)alloc.alloc(sizeof(X) * n);
 		for(uint i = 0; i < n; i += 1){ data[i] = i; }
 	}
 
 	~HeapArray(){
-		delete [] data;
+		alloc.free(data);
 	}
 };
 
@@ -57,12 +93,14 @@ void print_list(List<T> l){
 }
 
 int main(){
-	auto heap  = HeapArray<float>(12);
-	auto stack = StkArray<float, 3>{4,2,0};
+	auto ally = HeapAllocator();
+
+	auto heaparr  = HeapArray<float>(make_allocator(&ally), 12);
+	auto stackarr = StkArray<float, 3>{4,2,0};
 
 	// l1 and l2 are "fat pointers", they have reference semantics
-	auto l1 = make_list<float>(&heap);
-	auto l2 = make_list<float>(&stack);
+	auto l1 = make_list<float>(&heaparr);
+	auto l2 = make_list<float>(&stackarr);
 
 	print_list(l1);
 	print_list(l2);

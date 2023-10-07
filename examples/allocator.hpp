@@ -1,4 +1,5 @@
 #include <cstddef>
+#include "types.hpp"
 
 struct Allocator {
 struct VTable {
@@ -59,10 +60,10 @@ return obj->has_address(p);
 };
 };
 template<typename _Impl>
-auto make_allocator(void* impl){
+auto make_allocator(_Impl* impl){
 static constexpr const auto vt = Allocator::vtable_helper<_Impl>;
 return Allocator{
-._vtable = &vt,
 ._impl = impl,
+._vtable = &vt,
 };
 }

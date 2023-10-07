@@ -18,12 +18,34 @@ you still can specify your own vtables just fine.
 ### Simple concrete type (Allocator)
 
 ```python
-import interfacer as i
+from interfacer import interface
+
+# Helper function that creates an Interface object
+interface('Allocator', {
+    # Use the @include directive to add files
+    '@include': ['<cstddef>', 'types.hpp'],
+    # All declarations follow ID:TYPE form, spaces are ignored
+    'alloc: void*': ['nbytes: usize'],
+    'alloc_undef: void*': ['nbytes: usize'],
+    'realloc: void*': ['p: void*', 'nbytes: usize'],
+    'free: void': ['p: void*'],
+    # Empty list means no args
+    'free_all: void': [],
+    # To mark a procedure as const, just drop a @const in its argument list
+    'has_address: bool': ['p: void*', '@const']
+}).generate_file('examples/allocator.hpp', guard='pragma')
+# When generating to a file, you can choose the header guard style: ifdef, pragma or none(default)
 ```
 
 ### Generic container type (List)
 ```python
 import interfacer as i
+interface('List', {
+    # Pass template args in the @template field
+    '@template':['T: typename'],
+    'at: T&':['idx: int'],
+    'len: int':['@const']
+}).generate_file('examples/list.hpp')
 ```
 
 ## Limitations

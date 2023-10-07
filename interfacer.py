@@ -78,7 +78,7 @@ class Interface:
             templ_decl = [f'template<{templ_decl}>']
 
         vtable = ['struct VTable {'] + func_ptrs + ['};']
-        m_data = ['void * _impl;', 'const VTable * const _vtable;']
+        m_data = ['void * _impl;', 'const VTable * _vtable;']
         m_funcs = list(map(lambda m: m.implementation(), self.methods))
         vtable_helper = self.generate_vtable_helper()
 

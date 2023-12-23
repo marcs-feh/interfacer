@@ -60,7 +60,7 @@ template<typename X>
 struct HeapArray {
 	X* data;
 	uint length;
-	Allocator alloc;
+	mem::Allocator alloc;
 
 	X& at(int idx){
 		return data[idx];
@@ -71,7 +71,7 @@ struct HeapArray {
 		return length;
 	}
 
-	HeapArray(Allocator al, uint n) : length{n}, alloc(al) {
+	HeapArray(mem::Allocator al, uint n) : length{n}, alloc(al) {
 		data = (float*)alloc.alloc(sizeof(X) * n);
 		for(uint i = 0; i < n; i += 1){ data[i] = i; }
 	}
@@ -95,7 +95,7 @@ void print_list(List<T> l){
 int main(){
 	auto ally = HeapAllocator();
 
-	auto heaparr  = HeapArray<float>(as_allocator(&ally), 12);
+	auto heaparr  = HeapArray<float>(mem::as_allocator(&ally), 12);
 	auto stackarr = StkArray<float, 3>{4,2,0};
 
 	// l1 and l2 are "fat pointers", they have reference semantics

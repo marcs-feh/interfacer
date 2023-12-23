@@ -2,7 +2,7 @@ from interfacer import interface
 
 interface('Allocator', {
     '@include': ['<cstddef>', 'types.hpp'],
-    '@namespace': 'mem',
+    '@namespace': ['mem'],
     'alloc: void*': ['nbytes: usize'],
     'alloc_undef: void*': ['nbytes: usize'],
     'realloc: void*': ['p: void*', 'nbytes: usize'],

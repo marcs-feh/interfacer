@@ -31,6 +31,9 @@ from interfacer import interface
 interface('Allocator', {
     # Use the @include directive to add files
     '@include': ['<cstddef>', 'types.hpp'],
+    # You can use @namespace to prepend namespaces to the interface
+    # Use [''] for an anonymous namespace
+    'namespace': ['mem', 'virt'],
     # All declarations follow ID:TYPE form, spaces are ignored
     'alloc: void*': ['nbytes: usize'],
     'alloc_undef: void*': ['nbytes: usize'],

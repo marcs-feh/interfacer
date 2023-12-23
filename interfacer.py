@@ -78,7 +78,7 @@ class Interface:
     def generate_namespace(self) -> tuple[str, str]:
         left, right = '', ''
         if self.namespace is not None:
-            ids = self.namespace.split('::')
+            ids = self.namespace
             left = [f'namespace {i} {{' for i in ids]
             right = '}' * len(left)
         left = '\n'.join(left)
@@ -232,7 +232,6 @@ def extract_template(d: dict) -> list[Declaration] | None:
 def extract_namespace(d: dict) -> str | None:
     try:
         space = d.pop('@namespace')
-        assert type(space) is str
         return space
     except KeyError:
         return None

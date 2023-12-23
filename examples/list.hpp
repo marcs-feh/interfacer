@@ -5,7 +5,7 @@ T& (*at)(void * impl, int idx);
 int (*len)(const void * impl);
 };
 void * _impl;
-const VTable * const _vtable;
+const VTable * _vtable;
 T& at(int idx){
 return _vtable->at(_impl, idx);
 }
@@ -26,7 +26,7 @@ return obj->len();
 };
 };
 template<typename T, typename _Impl>
-auto make_list(_Impl* impl){
+auto as_list(_Impl* impl){
 static constexpr const auto vt = List<T>::template vtable_helper<_Impl>;
 return List<T>{
 ._impl = impl,

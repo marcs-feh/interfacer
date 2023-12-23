@@ -11,7 +11,7 @@ void (*free_all)(void * impl);
 bool (*has_address)(void * impl, void* p);
 };
 void * _impl;
-const VTable * const _vtable;
+const VTable * _vtable;
 void* alloc(usize nbytes){
 return _vtable->alloc(_impl, nbytes);
 }
@@ -60,7 +60,7 @@ return obj->has_address(p);
 };
 };
 template<typename _Impl>
-auto make_allocator(_Impl* impl){
+auto as_allocator(_Impl* impl){
 static constexpr const auto vt = Allocator::vtable_helper<_Impl>;
 return Allocator{
 ._impl = impl,

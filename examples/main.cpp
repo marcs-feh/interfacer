@@ -95,12 +95,12 @@ void print_list(List<T> l){
 int main(){
 	auto ally = HeapAllocator();
 
-	auto heaparr  = HeapArray<float>(make_allocator(&ally), 12);
+	auto heaparr  = HeapArray<float>(as_allocator(&ally), 12);
 	auto stackarr = StkArray<float, 3>{4,2,0};
 
 	// l1 and l2 are "fat pointers", they have reference semantics
-	auto l1 = make_list<float>(&heaparr);
-	auto l2 = make_list<float>(&stackarr);
+	auto l1 = as_list<float>(&heaparr);
+	auto l2 = as_list<float>(&stackarr);
 
 	print_list(l1);
 	print_list(l2);

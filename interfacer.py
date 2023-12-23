@@ -1,3 +1,5 @@
+# See end of file for licensing information.
+
 from dataclasses import dataclass
 from hashlib import md5
 from copy import deepcopy
@@ -102,7 +104,7 @@ class Interface:
         templ_decl = ', '.join(templ_decl)
 
         helper = [f'template<{templ_decl}>',
-                  f'auto make_{self.name.lower()}(_Impl* impl){{',
+                  f'auto as_{self.name.lower()}(_Impl* impl){{',
                   f'static constexpr const auto vt = {ret_type}::{dependant_type}vtable_helper<_Impl>;',
                   f'return {ret_type}{{',
                   '._impl = impl,',
@@ -223,3 +225,16 @@ def interface(name: str, d: dict) -> Interface:
     dc = deepcopy(d)
     return extract_interface(name, dc)
 
+
+'''
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+'''

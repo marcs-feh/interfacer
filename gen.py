@@ -8,10 +8,11 @@ interface('Allocator', {
     'free: void': ['p: void*'],
     'free_all: void': [],
     'has_address: bool': ['p: void*']
-}).generate_file('examples/allocator.hpp')
+}).generate_file('examples/allocator.hpp', indent_src=False, guard='ifdef')
 
 interface('List', {
     '@template':['T: typename'],
     'at: T&':['idx: int'],
     'len: int':['@const']
-}).generate_file('examples/list.hpp')
+}).generate_file('examples/list.hpp', indent_src=True, tabsize=2)
+# A tabsize of None means use regular tabs instead of spaces

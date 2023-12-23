@@ -10,12 +10,19 @@ you still can specify your own vtables just fine.
 
 ![Different Approaches for Dynamic Dispatch](info.png)
 
+## Installation
+
+There's no installation. Copy the `interfacer.py` file to your project and use
+it as you wish.
+
 ## Usage
 
 > NOTE: Requires C++14 or later, ideally you should use C++17 or later as it
 > can take advantage of better `constexpr`
 
 ### Simple concrete type (Allocator)
+
+Also look at the `gen.py` file.
 
 ```python
 from interfacer import interface

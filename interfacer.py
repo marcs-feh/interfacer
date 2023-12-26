@@ -2,7 +2,8 @@
 
 import datetime
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
 from copy import deepcopy
 from sys import stderr
 from textwrap import dedent, indent
@@ -60,10 +61,10 @@ class Method:
 class Interface:
     name: str
     methods: list[Method]
-    template: list[Declaration]|None = None
-    includes: list[str]|None = None
-    aliases: list[Declaration]|None = None
-    namespaces: list[str]|None = None
+    template: list[Declaration] = field(default_factory=list)
+    namespaces: list[str] = field(default_factory=list)
+    includes: list[str]= field(default_factory=list)
+    aliases: list[Declaration]= field(default_factory=list)
 
     def generate_vtable_helper(self) -> str:
         methods = ',\n'.join(map(lambda m: m.vtable_lambda_impl(), self.methods))
@@ -77,7 +78,7 @@ class Interface:
 
     def generate_namespace(self) -> tuple[str, str]:
         left, right = '', ''
-        if self.namespaces is not None:
+        if len(self.namespaces) > 0:
             ids = self.namespaces
             left = [f'namespace {i} {{' for i in ids]
             right = '}' * len(left)
@@ -89,7 +90,7 @@ class Interface:
         func_ptrs = list(map(lambda m: m.func_ptr_decl(), self.methods))
         struct = [f'struct {self.name} {{']
         templ_decl = []
-        if self.template is not None:
+        if len(self.template) > 0:
             templ_decl = ', '.join(map(lambda d: d.expand(), self.template))
             templ_decl = [f'template<{templ_decl}>']
 
@@ -108,7 +109,7 @@ class Interface:
         ret_type = f'{self.name}'
         templ_decl = []
         dependant_type = ''
-        if self.template is not None:
+        if len(self.template) > 0:
             templ_decl += list(map(lambda d: d.expand(), self.template))
             templ_usage = ', '.join(map(lambda d: d.name, self.template))
             ret_type += f'<{templ_usage}>'
@@ -139,7 +140,7 @@ class Interface:
         src.append(ns1)
 
         sys_include = lambda s: (s[0] == '<') and (s[-1] == '>')
-        if self.includes is not None:
+        if len(self.includes) > 0:
             incs = '\n'.join(map(
                 lambda i:f'#include {i}' if sys_include(i) else f'#include "{i}"',
                 self.includes
@@ -216,28 +217,28 @@ def remove_all(l: list, e) -> int:
 
     return n
 
-def extract_includes(d: dict) -> list[str] | None:
+def extract_includes(d: dict) -> list[str]:
     try:
         includes = list( map(lambda s: s.strip(), d.pop('@include')))
 
         return includes
     except KeyError:
-        return
+        return []
 
-def extract_template(d: dict) -> list[Declaration] | None:
+def extract_template(d: dict) -> list[Declaration]:
     try:
         args = d.pop('@template')
         args = list(map(lambda a: extract_decl(a), args))
         return args
     except KeyError:
-        return None
+        return []
 
-def extract_namespace(d: dict) -> list[str] | None:
+def extract_namespace(d: dict) -> list[str]:
     try:
         space = d.pop('@namespace')
         return space
     except KeyError:
-        return None
+        return []
 
 def extract_methods(d: dict) -> list[Method]:
     methods = []

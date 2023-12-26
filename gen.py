@@ -9,7 +9,7 @@ interface('Allocator', {
     'free: void': ['p: void*'],
     'free_all: void': [],
     'has_address: bool': ['p: void*'],
-}).generate_file('examples/allocator.hpp', indent_src=True, guard='ifdef')
+}).generate_file('examples/allocator.hpp', indent_src=True, guard='custom', custom_str='_include_writer_hpp_')
 
 interface('List', {
     '@template':['T: typename'],

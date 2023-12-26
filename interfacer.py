@@ -63,7 +63,7 @@ class Interface:
     template: list[Declaration]|None = None
     includes: list[str]|None = None
     aliases: list[Declaration]|None = None
-    namespace: str|None = None
+    namespaces: list[str]|None = None
 
     def generate_vtable_helper(self) -> str:
         methods = ',\n'.join(map(lambda m: m.vtable_lambda_impl(), self.methods))
@@ -77,8 +77,8 @@ class Interface:
 
     def generate_namespace(self) -> tuple[str, str]:
         left, right = '', ''
-        if self.namespace is not None:
-            ids = self.namespace
+        if self.namespaces is not None:
+            ids = self.namespaces
             left = [f'namespace {i} {{' for i in ids]
             right = '}' * len(left)
         left = '\n'.join(left)
@@ -232,7 +232,7 @@ def extract_template(d: dict) -> list[Declaration] | None:
     except KeyError:
         return None
 
-def extract_namespace(d: dict) -> str | None:
+def extract_namespace(d: dict) -> list[str] | None:
     try:
         space = d.pop('@namespace')
         return space
@@ -263,7 +263,7 @@ def extract_interface(name, d) -> Interface:
         template=templ,
         methods=methods,
         includes=incs,
-        namespace=namesp,
+        namespaces=namesp,
     )
 
     return iface

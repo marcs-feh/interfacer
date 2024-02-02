@@ -1,4 +1,42 @@
+# interfacer.py: Generate Interfaces for C++
+#
+# Interfacer generates Interfaces for C++14 and later using double/"fat"
+# pointers. This allows you to implement interfaces *without* virtual, meaning
+# that you don't have to alter each your object's memory layout to be able to
+# use interfaces. This also makes interop with C considerably easier, because
+# the vtables are known and you control their function names, binding to C
+# becomes far less of a headache. The way Interfacer works is more akin to
+# Rust's `as &dyn <trait>` construct.
+#
+# How it (usually) works in C++:
+#     T Instance
+#   +-------------+               T VTable
+#   |  __vtable*  |----------->+------------+
+#   |-------------|            |  method0() |
+#   | [real data] |            |  method1() |
+#   |             |            |  method2() |
+#   |     ...     |            +------------+
+#   +-------------+
+#
+# How it works with Interfacer:
+#
+#     T Instance                   T VTable
+#   +-------------+             +------------+
+#   | [real data] |             |  method0() |
+#   |             |             |  method1() |
+#   |     ...     |             |  method2() |
+#   +-------------+             +------------+
+#                 ^             ^
+#                  \            |
+#                   \           |
+#                +---------+-----------+
+#                | __impl* | __vtable* |
+#                +---------+-----------+
+#                       Interface
+#
 # See end of file for licensing information.
+
+
 
 import datetime
 import uuid
@@ -293,3 +331,4 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
+
